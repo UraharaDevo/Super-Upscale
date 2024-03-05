@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 
+
 class ImageAdjustments:
     def __init__(self, color_level):
         """
