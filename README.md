@@ -36,3 +36,4 @@ Repository created for that [Colab Notebook](https://colab.research.google.com/d
 Some of the code was taken from these repositories:
 * [muslll/neosr](https://github.com/muslll/neosr)
 * [chaiNNer-org/chaiNNer](https://github.com/chaiNNer-org/chaiNNer)
+* [sr-core](https://github.com/umzi2/sr-core)
