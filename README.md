@@ -1,4 +1,4 @@
-# SRCore
+# Super Upscale
 Upscaler that supports multiple Image Super-Resolution architectures.
 Example of use with the Upscaler helper class:
 ```py
