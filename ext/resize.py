@@ -1,83 +1,48 @@
-from chainner_ext import resize, ResizeFilter
-import numpy as np
 import os
-import cv2
+from wand.image import Image
 
-class Resize:
-    def __init__(self, setting):
-        self.size = setting["size"]
-        self.width = setting["width"]
-        self.interpolation = setting["interpolation"]
-        self.percent = setting["percent"] / 100
-        self.spread = setting["spread"]
-        self.spread_size = setting["spread_size"]
-        self.interpolation_map = self._create_interpolation_map(setting["interpolation"])
+class ImageResizer:
 
-    def _create_interpolation_map(self, interpolation):
-        if interpolation == "auto":
-            # Logic to choose interpolation based on upsizing or downsizing
-            return {
-                'upscale': ResizeFilter.Cubic,
-                'downscale': ResizeFilter.Lanczos
-            }
-        else:
-            return {
-                interpolation: ResizeFilter[interpolation]
-            }
+    def __init__(self, settings):
+        self.settings = settings
 
-    def _determine_interpolation(self, original_size, new_size):
-        if new_size > original_size:
-            return self.interpolation_map.get('upscale', ResizeFilter.Cubic)
+    def select_interpolation_method(self, width, height, new_width, new_height):
+        if self.settings.get('interpolation') == 'auto':
+            if new_width > width or new_height > height:
+                return 'lanczos'
+            else:
+                return 'mitchell'
         else:
-            return self.interpolation_map.get('downscale', ResizeFilter.Lanczos)
-        
-        
-    def Factor(self, img):
-        """تطبيق النسبة المئوية لتغيير حجم الصورة."""
-        height, width = img.shape[:2]
-        new_width = int(width * self.percent / 100)
-        new_height = int(height * self.percent / 100)
-        return (new_width, new_height)
-    
-    def resize_to_side(self, img):
-        """تغيير حجم الصورة إلى جانب محدد باستخدام spread."""
-        height, width = img.shape[:2]
-        if self.width:
-            new_height = self.spread_size
-            new_width = int(width / height * self.spread_size)
-        else:
-            new_width = self.spread_size
-            new_height = int(height / width * self.spread_size)
-        return (new_width, new_height)
-    
-    def batch_mode(self, input_path, output_path):
-        """تغيير حجم جميع الصور في مجلد وحفظ النتائج في مجلد آخر باستخدام OpenCV."""
-        # التأكد من وجود المجلد الناتج
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-        
-        # قراءة جميع الملفات في المجلد المدخل
-        for filename in os.listdir(input_path):
-            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-                img_path = os.path.join(input_path, filename)
-                img = cv2.imread(img_path)  # قراءة الصورة باستخدام OpenCV
-                
-                if img is not None:
-                    # تطبيق تغيير الحجم
-                    resized_img = self.run(img)
+            return self.settings.get('interpolation', 'undefined').lower()
+
+    def resize_image(self, input_path, output_path):
+        with Image(filename=input_path) as img:
+            mode = self.settings.get('mode', 'factor')
+            width, height = img.width, img.height
+            
+            if mode == 'factor':
+                scale_factor = self.settings.get('scale_factor', 1)
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+            elif mode == 'side':
+                if self.settings.get('side') == 'width':
+                    new_width = self.settings.get('spread_size')
+                    new_height = int(new_width * (height / width))
+                elif self.settings.get('side') == 'height':
+                    new_height = self.settings.get('spread_size')
+                    new_width = int(new_height * (width / height))
                     
-                    # حفظ الصورة المعدلة باستخدام OpenCV
-                    cv2.imwrite(os.path.join(output_path, filename), resized_img)
-                else:
-                    print(f"Skipping file {filename}, not a valid image or cannot be read.")
-        
+            filter_type = self.select_interpolation_method(width, height, new_width, new_height)
+            
+            img.resize(new_width, new_height, filter=filter_type)
+            img.save(filename=output_path)
 
-    def run(self, img):
-        original_height, original_width = img.shape[:2]
-        if self.spread and ((self.width and original_width > self.spread_size) or (not self.width and original_height > self.spread_size)):
-            new_size = self.resize_to_side(img)
-        else:
-            new_size = self.Factor(img)
-        interpolation_method = self._determine_interpolation(original_width if self.width else original_height, new_size[0] if self.width else new_size[1])
-        resized_img = resize(img.astype(np.float32), new_size, interpolation_method, gamma_correction=False)
-        return resized_img
+    def batch_mode(self, input_folder, output_folder):
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        
+        for filename in os.listdir(input_folder):
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                input_path = os.path.join(input_folder, filename)
+                output_path = os.path.join(output_folder, filename)
+                self.resize_image(input_path, output_path)
