@@ -4,7 +4,7 @@ settings = {
     'side': 'width',
     'spread_size': 700,
     'interpolation': 'auto',
-    'scale_factor' :0.8
+    'scale_factor' : 80
 }
 
 resizer = ImageResizer(settings)

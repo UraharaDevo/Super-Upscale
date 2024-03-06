@@ -22,8 +22,8 @@ class ImageResizer:
             
             if mode == 'factor':
                 scale_factor = self.settings.get('scale_factor', 1)
-                new_width = int(width * scale_factor)
-                new_height = int(height * scale_factor)
+                new_width = int(width * scale_factor / 100)
+                new_height = int(height * scale_factor / 100)
             elif mode == 'side':
                 if self.settings.get('side') == 'width':
                     new_width = self.settings.get('spread_size')
